@@ -11,20 +11,29 @@ The workflow below works for most users. See [Troubleshooting: DevTools is not d
    ```shell
    adb forward tcp:9222 localabstract:chrome_devtools_remote
    ```
-5. Configure your MCP server to connect to the Chrome
+5. Test the connection with the CLI:
+   ```shell
+   npx chrome_devtools --browserUrl http://127.0.0.1:9222 list_pages
+   ```
+6. (Optional) If you need legacy MCP server mode, configure your MCP client to run:
    ```json
    "chrome-devtools": {
      "command": "npx",
      "args": [
-       "chrome-devtools-mcp@latest",
-       "--wsEndpoint=ws://127.0.0.1:9222/devtools/browser/"
+       "-y",
+       "--package",
+       "github:JoshuaSeth/chrome-devtools-cli",
+       "chrome_devtools",
+       "mcp",
+       "--browserUrl",
+       "http://127.0.0.1:9222"
      ],
      "trust": true
    }
    ```
-6. Test your setup by running the following prompt in your coding agent:
+7. Test your setup by running the following prompt in your coding agent:
    ```none
    Check the performance of developers.chrome.com
    ```
 
-The Chrome DevTools MCP server should now control Chrome on your Android device.
+The `chrome_devtools` toolset should now control Chrome on your Android device.

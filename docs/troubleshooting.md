@@ -2,20 +2,17 @@
 
 ## General tips
 
-- Run `npx chrome-devtools-mcp@latest --help` to test if the MCP server runs on your machine.
-- Make sure that your MCP client uses the same npm and node version as your terminal.
-- When configuring your MCP client, try using the `--yes` argument to `npx` to
-  auto-accept installation prompt.
-- Find a specific error in the output of the `chrome-devtools-mcp` server.
-  Usually, if your client is an IDE, logs would be in the Output pane.
+- Run `npx chrome_devtools --help` to confirm the CLI runs on your machine.
+- If you still need legacy MCP server mode, run `npx chrome_devtools mcp --help`.
+- Make sure your terminal and any IDE/agent runtime use the same Node/npm versions.
 
 ## Debugging
 
-Start the MCP server with debugging enabled and a log file:
+Start the CLI with debugging enabled and a log file:
 
-- `DEBUG=* npx chrome-devtools-mcp@latest --log-file=/path/to/chrome-devtools-mcp.log`
+- `DEBUG=* npx chrome_devtools list_pages --logFile=/path/to/chrome-devtools-cli.log`
 
-Using `.mcp.json` to debug while using a client:
+Using `.mcp.json` to debug while using a client (legacy MCP server mode):
 
 ```json
 {
@@ -24,9 +21,13 @@ Using `.mcp.json` to debug while using a client:
       "type": "stdio",
       "command": "npx",
       "args": [
-        "chrome-devtools-mcp@latest",
+        "-y",
+        "--package",
+        "github:JoshuaSeth/chrome-devtools-cli",
+        "chrome_devtools",
+        "mcp",
         "--log-file",
-        "/path/to/chrome-devtools-mcp.log"
+        "/path/to/chrome-devtools-cli.log"
       ],
       "env": {
         "DEBUG": "*"
@@ -42,7 +43,7 @@ Using `.mcp.json` to debug while using a client:
 
 This usually indicates either a non-supported Node version is in use or that the
 `npm`/`npx` cache is corrupted. Try clearing the cache, uninstalling
-`chrome-devtools-mcp` and installing it again. Clear the cache by running:
+`chrome-devtools-cli` and installing it again. Clear the cache by running:
 
 ```sh
 rm -rf ~/.npm/_npx # NOTE: this might remove other installed npx executables.

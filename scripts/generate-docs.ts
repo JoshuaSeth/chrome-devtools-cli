@@ -512,7 +512,7 @@ async function generateToolDocumentation(): Promise<void> {
     // Generate markdown documentation
     let markdown = `<!-- AUTO GENERATED DO NOT EDIT - run 'npm run docs' to update-->
 
-# Chrome DevTools MCP Tool Reference
+# Chrome DevTools CLI Tool Reference
 
 `;
 

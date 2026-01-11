@@ -158,7 +158,7 @@ export async function launch(options: McpLaunchOptions): Promise<Browser> {
     userDataDir = path.join(
       os.homedir(),
       '.cache',
-      'chrome-devtools-mcp',
+      'chrome-devtools-cli',
       profileDirName,
     );
     await fs.promises.mkdir(userDataDir, {

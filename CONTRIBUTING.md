@@ -42,8 +42,8 @@ for PR and commit titles.
 Check that you are using node version specified in .nvmrc, then run following commands:
 
 ```sh
-git clone https://github.com/ChromeDevTools/chrome-devtools-mcp.git
-cd chrome-devtools-mcp
+git clone https://github.com/JoshuaSeth/chrome-devtools-cli.git
+cd chrome-devtools-cli
 npm ci
 npm run build
 ```

@@ -24,7 +24,7 @@ export const cliOptions = {
   browserUrl: {
     type: 'string',
     description:
-      'Connect to a running, debuggable Chrome instance (e.g. `http://127.0.0.1:9222`). For more details see: https://github.com/ChromeDevTools/chrome-devtools-mcp#connecting-to-a-running-chrome-instance.',
+      'Connect to a running, debuggable Chrome instance (e.g. `http://127.0.0.1:9222`). For more details see: https://github.com/JoshuaSeth/chrome-devtools-cli#connecting-to-a-running-chrome-instance.',
     alias: 'u',
     conflicts: 'wsEndpoint',
     coerce: (url: string | undefined) => {
@@ -106,7 +106,7 @@ export const cliOptions = {
   userDataDir: {
     type: 'string',
     description:
-      'Path to the user data directory for Chrome. Default is $HOME/.cache/chrome-devtools-mcp/chrome-profile$CHANNEL_SUFFIX_IF_NON_STABLE',
+      'Path to the user data directory for Chrome. Default is $HOME/.cache/chrome-devtools-cli/chrome-profile$CHANNEL_SUFFIX_IF_NON_STABLE',
     conflicts: ['browserUrl', 'wsEndpoint', 'isolated'],
   },
   channel: {
@@ -166,7 +166,7 @@ export const cliOptions = {
   chromeArg: {
     type: 'array',
     describe:
-      'Additional arguments for Chrome. Only applies when Chrome is launched by chrome-devtools-mcp.',
+      'Additional arguments for Chrome. Only applies when Chrome is launched by chrome_devtools.',
   },
   categoryEmulation: {
     type: 'boolean',
@@ -187,7 +187,7 @@ export const cliOptions = {
 
 export function parseArguments(version: string, argv = process.argv) {
   const yargsInstance = yargs(hideBin(argv))
-    .scriptName('npx chrome-devtools-mcp@latest')
+    .scriptName('chrome_devtools')
     .options(cliOptions)
     .check(args => {
       // We can't set default in the options else

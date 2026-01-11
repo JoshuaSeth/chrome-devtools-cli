@@ -839,6 +839,7 @@ async function main() {
                 }
                 const commandTokens =
                   tokens[0] === 'chrome_devtools' ||
+                  tokens[0] === 'chrome-devtools-cli' ||
                   tokens[0] === 'chrome-devtools-mcp'
                     ? tokens.slice(1)
                     : tokens;

@@ -90,7 +90,7 @@ async function getContext(): Promise<McpContext> {
 
 const logDisclaimers = () => {
   console.error(
-    `chrome-devtools-mcp exposes content of the browser instance to the MCP clients allowing them to inspect,
+    `chrome-devtools-cli exposes content of the browser instance to the MCP clients allowing them to inspect,
 debug, and modify any data in the browser or DevTools.
 Avoid sharing sensitive or personal information that you do not want to share with MCP clients.`,
   );

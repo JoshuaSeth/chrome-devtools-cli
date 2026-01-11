@@ -1,10 +1,10 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
-  "name": "io.github.ChromeDevTools/chrome-devtools-mcp",
-  "title": "Chrome DevTools MCP",
-  "description": "MCP server for Chrome DevTools",
+  "name": "io.github.JoshuaSeth/chrome-devtools-cli",
+  "title": "Chrome DevTools CLI",
+  "description": "CLI-first fork of Chrome DevTools MCP (legacy MCP mode available via the `mcp` subcommand).",
   "repository": {
-    "url": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+    "url": "https://github.com/JoshuaSeth/chrome-devtools-cli",
     "source": "github"
   },
   "version": "0.12.1",
@@ -12,7 +12,7 @@
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
-      "identifier": "chrome-devtools-mcp",
+      "identifier": "chrome-devtools-cli",
       "version": "0.12.1",
       "transport": {
         "type": "stdio"

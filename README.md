@@ -1,20 +1,19 @@
-# Chrome DevTools MCP
+# Chrome DevTools CLI
 
-[![npm chrome-devtools-mcp package](https://img.shields.io/npm/v/chrome-devtools-mcp.svg)](https://npmjs.org/package/chrome-devtools-mcp)
+CLI-first fork of `ChromeDevTools/chrome-devtools-mcp`.
 
-`chrome-devtools-mcp` lets your scripts, CLIs, and coding agents control and inspect a live Chrome browser.
-
-This repository is a PitchAI fork that is **CLI-first**: every tool is exposed as a direct command (no MCP
-client required). For compatibility, the legacy MCP server mode is still available via the `mcp` subcommand.
+`chrome_devtools` lets your scripts, CLIs, and coding agents control and inspect a live Chrome browser using the same
+toolset as upstream, but **without requiring an MCP client/server integration**. This is designed for environments like
+Codex CLI and Claude “skills” that can shell out to a command.
 
 ## [Tool reference](./docs/tool-reference.md) | [Changelog](./CHANGELOG.md) | [Contributing](./CONTRIBUTING.md) | [Troubleshooting](./docs/troubleshooting.md) | [Design Principles](./docs/design-principles.md)
 
-## PitchAI fork: CLI-first (no MCP required)
+## Fork goals (CLI-first, MCP optional)
 
 **What changed vs upstream**
 
-- Default execution is now the direct CLI (tool commands).
-- MCP server mode is still supported, but only when explicitly started with `mcp`.
+- All upstream tools are exposed as direct CLI subcommands (plus PitchAI extras).
+- MCP server mode is still available via `chrome_devtools mcp`, but it is no longer the default path.
 
 ### Install & use from any repo
 
@@ -22,7 +21,7 @@ Install once (recommended):
 
 ```bash
 # in your project
-npm i -D github:JoshuaSeth/chrome-devtools-mcp
+npm i -D github:JoshuaSeth/chrome-devtools-cli
 
 # then run
 npx chrome_devtools --help
@@ -31,7 +30,7 @@ npx chrome_devtools --help
 Or run one-off without installing:
 
 ```bash
-npx -y --package github:JoshuaSeth/chrome-devtools-mcp chrome_devtools --help
+npx -y --package github:JoshuaSeth/chrome-devtools-cli chrome_devtools --help
 ```
 
 ### Quickstart (local checkout)
@@ -53,7 +52,7 @@ npx -y . take_snapshot
 Every tool name is a direct command:
 
 ```bash
-chrome_devtools <tool-name> [tool args] [chrome-devtools-mcp options]
+chrome_devtools <tool-name> [tool args] [browser/session options]
 ```
 
 Example:
@@ -212,7 +211,7 @@ chrome_devtools mcp --headless --isolated
 
 ## Disclaimers
 
-`chrome-devtools-mcp` exposes content of the browser instance to whoever runs it (CLI, scripts, or MCP
+`chrome_devtools` exposes content of the browser instance to whoever runs it (CLI, scripts, or MCP
 clients), allowing them to inspect, debug, and modify any data in the browser or DevTools. Avoid sharing
 sensitive or personal information that you don't want to expose.
 
@@ -572,7 +571,7 @@ The CLI (and legacy `mcp` subcommand) supports the following configuration optio
   - **Default:** `false`
 
 - **`--browserUrl`/ `--browser-url`, `-u`**
-  Connect to a running, debuggable Chrome instance (e.g. `http://127.0.0.1:9222`). For more details see: https://github.com/ChromeDevTools/chrome-devtools-mcp#connecting-to-a-running-chrome-instance.
+  Connect to a running, debuggable Chrome instance (e.g. `http://127.0.0.1:9222`). For more details see: https://github.com/JoshuaSeth/chrome-devtools-cli#connecting-to-a-running-chrome-instance.
   - **Type:** string
 
 - **`--wsEndpoint`/ `--ws-endpoint`, `-w`**
@@ -597,7 +596,7 @@ The CLI (and legacy `mcp` subcommand) supports the following configuration optio
   - **Type:** boolean
 
 - **`--userDataDir`/ `--user-data-dir`**
-  Path to the user data directory for Chrome. Default is $HOME/.cache/chrome-devtools-mcp/chrome-profile$CHANNEL_SUFFIX_IF_NON_STABLE
+  Path to the user data directory for Chrome. Default is $HOME/.cache/chrome-devtools-cli/chrome-profile$CHANNEL_SUFFIX_IF_NON_STABLE
   - **Type:** string
 
 - **`--channel`**
@@ -622,7 +621,7 @@ The CLI (and legacy `mcp` subcommand) supports the following configuration optio
   - **Type:** boolean
 
 - **`--chromeArg`/ `--chrome-arg`**
-  Additional arguments for Chrome. Only applies when Chrome is launched by chrome-devtools-mcp.
+  Additional arguments for Chrome. Only applies when Chrome is launched by chrome_devtools.
   - **Type:** array
 
 - **`--categoryEmulation`/ `--category-emulation`**
@@ -666,13 +665,13 @@ You can also run `npx -y . --help` (CLI) or `npx -y . mcp --help` (legacy MCP se
 
 ### User data directory
 
-`chrome-devtools-mcp` starts Chrome using the following user data directory:
+`chrome_devtools` starts Chrome using the following user data directory:
 
-- Linux / macOS: `$HOME/.cache/chrome-devtools-mcp/chrome-profile-$CHANNEL`
-- Windows: `%HOMEPATH%/.cache/chrome-devtools-mcp/chrome-profile-$CHANNEL`
+- Linux / macOS: `$HOME/.cache/chrome-devtools-cli/chrome-profile-$CHANNEL`
+- Windows: `%HOMEPATH%/.cache/chrome-devtools-cli/chrome-profile-$CHANNEL`
 
 The user data directory is not cleared between runs and shared across
-all instances of `chrome-devtools-mcp`. Set the `isolated` option to `true`
+all instances of `chrome_devtools`. Set the `isolated` option to `true`
 to use a temporary user data dir instead which will be cleared automatically after
 the browser is closed.
 
@@ -684,7 +683,7 @@ By default, the CLI starts a new Chrome instance with a dedicated profile. This 
 - When you need to sign into a website. Some accounts may prevent sign-in when the browser is controlled via WebDriver (the default launch mechanism).
 - If you're running your LLM inside a sandboxed environment, but you would like to connect to a Chrome instance that runs outside the sandbox.
 
-In these cases, start Chrome first and let `chrome-devtools-mcp` connect to it. There are two ways to do so:
+In these cases, start Chrome first and let `chrome_devtools` connect to it. There are two ways to do so:
 
 - **Automatic connection (available in Chrome 145+)**: best for sharing state between manual and agent-driven testing.
 - **Manual connection via remote debugging port**: best when running inside a sandboxed environment.
@@ -698,9 +697,9 @@ In Chrome (\>= M144), do the following to set up remote debugging:
 1.  Navigate to `chrome://inspect/#remote-debugging` to enable remote debugging.
 2.  Follow the dialog UI to allow or disallow incoming debugging connections.
 
-**Step 2:** Run `chrome-devtools-mcp` with `--autoConnect`
+**Step 2:** Run `chrome_devtools` with `--autoConnect`
 
-To connect `chrome-devtools-mcp` to the running Chrome instance, use `--autoConnect`:
+To connect `chrome_devtools` to the running Chrome instance, use `--autoConnect`:
 
 ```bash
 npx -y . list_pages --autoConnect --channel=stable
@@ -752,4 +751,4 @@ For more details on remote debugging, see the [Chrome DevTools documentation](ht
 
 ### Operating system sandboxes
 
-If you run `chrome-devtools-mcp` in an OS sandbox (macOS Seatbelt, Linux containers, etc.), it may not be able to launch Chrome (Chrome needs permissions to create its own sandboxes). As a workaround, start Chrome outside the sandbox and use `--browser-url` (or `--wsEndpoint`) to connect.
+If you run `chrome_devtools` in an OS sandbox (macOS Seatbelt, Linux containers, etc.), it may not be able to launch Chrome (Chrome needs permissions to create its own sandboxes). As a workaround, start Chrome outside the sandbox and use `--browser-url` (or `--wsEndpoint`) to connect.
