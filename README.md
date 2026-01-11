@@ -16,6 +16,24 @@ client required). For compatibility, the legacy MCP server mode is still availab
 - Default execution is now the direct CLI (tool commands).
 - MCP server mode is still supported, but only when explicitly started with `mcp`.
 
+### Install & use from any repo
+
+Install once (recommended):
+
+```bash
+# in your project
+npm i -D github:JoshuaSeth/chrome-devtools-mcp
+
+# then run
+npx chrome_devtools --help
+```
+
+Or run one-off without installing:
+
+```bash
+npx -y --package github:JoshuaSeth/chrome-devtools-mcp chrome_devtools --help
+```
+
 ### Quickstart (local checkout)
 
 ```bash
@@ -35,27 +53,27 @@ npx -y . take_snapshot
 Every tool name is a direct command:
 
 ```bash
-npx -y . <tool-name> [--params '<json>'] [chrome-devtools-mcp options]
+chrome_devtools <tool-name> [tool args] [chrome-devtools-mcp options]
 ```
 
 Example:
 
 ```bash
-npx -y . list_pages
+chrome_devtools list_pages
 ```
 
 ### Stateful session (recommended for multi-step flows)
 
 One-shot calls start a fresh browser/context each time, so snapshot `uid`s are not reusable between commands.
-Use `session` to keep state and call multiple tools over stdin/stdout (JSON lines):
+Use `session` to keep state and call multiple tools over stdin/stdout.
 
 ```bash
-npx -y . session --headless --isolated
+chrome_devtools session --headless --isolated --format text
 
-# then send JSON lines like:
-# {"tool":"list_pages","params":{}}
-# {"tool":"take_snapshot","params":{}}
-# {"tool":"click","params":{"uid":"<uid from take_snapshot>"}}
+# then send CLI lines like:
+# list_pages
+# take_snapshot
+# click <uid from take_snapshot>
 ```
 
 ### All direct tool commands
@@ -64,72 +82,72 @@ npx -y . session --headless --isolated
 
 These commands are generated from the tool definitions. Replace placeholders like `<uid>` and `<insightSetId>`.
 
-Browser/session options (like `--headless`, `--isolated`, `--browserUrl`, `--wsEndpoint`) configure the browser session and should be passed to `session`.
+For multi-step flows (required for `<uid>`-based tools), start a single browser session:
 
 ```bash
-npx -y . session --headless --isolated
+chrome_devtools session --headless --isolated --format text
 ```
 
-Then send JSON lines like the following to stdin (one line per tool call):
+Then run tools as direct commands (you can paste the same lines into `session`; the `chrome_devtools` prefix is optional):
 
 #### Input automation
 
-```jsonl
-{"tool":"click","params":{"uid":"<uid>"}}
-{"tool":"drag","params":{"from_uid":"<uid>","to_uid":"<uid>"}}
-{"tool":"fill","params":{"uid":"<uid>","value":"Example text"}}
-{"tool":"fill_form","params":{"elements":[{"uid":"<uid>","value":"Example text"}]}}
-{"tool":"handle_dialog","params":{"action":"accept"}}
-{"tool":"hover","params":{"uid":"<uid>"}}
-{"tool":"press_key","params":{"key":"Enter"}}
-{"tool":"upload_file","params":{"uid":"<uid>","filePath":"/absolute/path/to/file"}}
+```bash
+chrome_devtools click <uid>
+chrome_devtools drag <uid> <uid>
+chrome_devtools fill <uid> "Example text"
+chrome_devtools fill_form --elements '[{"uid":"<uid>","value":"Example text"}]'
+chrome_devtools handle_dialog accept
+chrome_devtools hover <uid>
+chrome_devtools press_key Enter
+chrome_devtools upload_file <uid> /absolute/path/to/file
 ```
 
 #### Navigation automation
 
-```jsonl
-{"tool":"close_page","params":{"pageId":2}}
-{"tool":"list_pages","params":{}}
-{"tool":"navigate_page","params":{"url":"https://example.com"}}
-{"tool":"new_page","params":{"url":"https://example.com"}}
-{"tool":"select_page","params":{"pageId":1}}
-{"tool":"wait_for","params":{"text":"Example text"}}
+```bash
+chrome_devtools close_page 2
+chrome_devtools list_pages
+chrome_devtools navigate_page --url https://example.com
+chrome_devtools new_page https://example.com
+chrome_devtools select_page 1
+chrome_devtools wait_for "Example text"
 ```
 
 #### Emulation
 
-```jsonl
-{"tool":"emulate","params":{"networkConditions":"Slow 3G","cpuThrottlingRate":4}}
-{"tool":"resize_page","params":{"width":1280,"height":720}}
+```bash
+chrome_devtools emulate --networkConditions "Slow 3G" --cpuThrottlingRate 4
+chrome_devtools resize_page 1280 720
 ```
 
 #### Performance
 
-```jsonl
-{"tool":"performance_analyze_insight","params":{"insightSetId":"<insightSetId>","insightName":"LCPBreakdown"}}
-{"tool":"performance_get_event_by_key","params":{"eventKey":"r-123"}}
-{"tool":"performance_get_main_thread_track_summary","params":{"min":0,"max":1000000}}
-{"tool":"performance_get_network_track_summary","params":{"min":0,"max":1000000}}
-{"tool":"performance_start_trace","params":{"reload":true,"autoStop":true}}
-{"tool":"performance_stop_trace","params":{}}
+```bash
+chrome_devtools performance_analyze_insight <insightSetId> LCPBreakdown
+chrome_devtools performance_get_event_by_key r-123
+chrome_devtools performance_get_main_thread_track_summary 0 1000000
+chrome_devtools performance_get_network_track_summary 0 1000000
+chrome_devtools performance_start_trace --reload --autoStop
+chrome_devtools performance_stop_trace
 ```
 
 #### Network
 
-```jsonl
-{"tool":"get_network_request","params":{"reqid":1}}
-{"tool":"list_network_requests","params":{"pageSize":25,"pageIdx":0}}
+```bash
+chrome_devtools get_network_request --reqid 1
+chrome_devtools list_network_requests --pageSize 25 --pageIdx 0
 ```
 
 #### Debugging
 
-```jsonl
-{"tool":"evaluate_script","params":{"function":"() => document.title"}}
-{"tool":"get_console_message","params":{"msgid":1}}
-{"tool":"list_console_messages","params":{"pageSize":25,"pageIdx":0}}
-{"tool":"take_change_snapshot","params":{"baselineKey":"default"}}
-{"tool":"take_screenshot","params":{"fullPage":true}}
-{"tool":"take_snapshot","params":{"verbose":false}}
+```bash
+chrome_devtools evaluate_script "() => document.title"
+chrome_devtools get_console_message 1
+chrome_devtools list_console_messages --pageSize 25 --pageIdx 0
+chrome_devtools take_change_snapshot --baselineKey default
+chrome_devtools take_screenshot --fullPage
+chrome_devtools take_snapshot --no-verbose
 ```
 
 <!-- END AUTO GENERATED CLI COMMANDS -->
@@ -138,37 +156,39 @@ Then send JSON lines like the following to stdin (one line per tool call):
 
 #### `session` (CLI command)
 
-Stateful JSON-lines runner for calling multiple tools in one browser/context:
+Stateful runner for calling multiple tools in one browser/context (accepts JSON lines or CLI lines):
 
 ```bash
-npx -y . session --headless --isolated
+chrome_devtools session --headless --isolated --format text
 
-# then send JSON lines like:
-# {"tool":"list_pages","params":{}}
-# {"tool":"take_snapshot","params":{}}
-# {"tool":"click","params":{"uid":"<uid from take_snapshot>"}}
+# then send CLI lines like:
+# list_pages
+# take_snapshot
+# click <uid from take_snapshot>
+
+# (or JSON lines like {"tool":"click","params":{"uid":"<uid>"}})
 ```
 
 #### `take_change_snapshot` (tool)
 
 Diff-only AX snapshot for dynamic UIs (baseline is stored in-memory, so this needs `session`):
 
-```jsonl
-{"tool":"take_change_snapshot","params":{"baselineKey":"default","replaceBaseline":true}}
-{"tool":"wait_for","params":{"text":"Loaded"}}
-{"tool":"take_change_snapshot","params":{"baselineKey":"default","replaceBaseline":true}}
+```bash
+take_change_snapshot --baselineKey default --replaceBaseline
+wait_for "Loaded"
+take_change_snapshot --baselineKey default --replaceBaseline
 ```
 
 #### Extra performance trace helpers (tools)
 
 These require a previously recorded trace in the same `session`:
 
-```jsonl
-{"tool":"performance_start_trace","params":{"reload":true,"autoStop":true}}
-{"tool":"performance_analyze_insight","params":{"insightSetId":"<insightSetId>","insightName":"LCPBreakdown"}}
-{"tool":"performance_get_event_by_key","params":{"eventKey":"r-123"}}
-{"tool":"performance_get_main_thread_track_summary","params":{"min":0,"max":1000000}}
-{"tool":"performance_get_network_track_summary","params":{"min":0,"max":1000000}}
+```bash
+performance_start_trace --reload --autoStop
+performance_analyze_insight <insightSetId> LCPBreakdown
+performance_get_event_by_key r-123
+performance_get_main_thread_track_summary 0 1000000
+performance_get_network_track_summary 0 1000000
 ```
 
 ### Legacy MCP server mode (optional)
@@ -176,7 +196,7 @@ These require a previously recorded trace in the same `session`:
 Start the MCP server:
 
 ```bash
-npx -y . mcp --headless --isolated
+chrome_devtools mcp --headless --isolated
 ```
 
 ## Key features

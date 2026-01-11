@@ -26,6 +26,7 @@ interface ToolWithAnnotations extends Tool {
     category?: typeof ToolCategory;
     conditions?: string[];
   };
+  schema?: Record<string, ZodSchema>;
 }
 
 interface ZodCheck {
@@ -266,12 +267,108 @@ const TOOL_CLI_EXAMPLE_PARAMS: Record<string, Record<string, unknown> | null> =
   };
 
 function getCliCommandForTool(tool: ToolWithAnnotations): string {
-  const exampleParams = TOOL_CLI_EXAMPLE_PARAMS[tool.name];
-  const paramsObject = exampleParams ?? {};
-  return JSON.stringify({
-    tool: tool.name,
-    params: paramsObject,
-  });
+  const exampleParams = TOOL_CLI_EXAMPLE_PARAMS[tool.name] ?? {};
+
+  const schemaEntries = Object.entries(
+    (tool.schema ?? {}) as Record<string, ZodSchema>,
+  );
+
+  const unwrap = (
+    schema: ZodSchema,
+  ): {
+    schema: ZodSchema;
+    required: boolean;
+  } => {
+    let required = true;
+    let def = schema._def;
+    while (
+      def.typeName === 'ZodOptional' ||
+      def.typeName === 'ZodDefault' ||
+      def.typeName === 'ZodEffects'
+    ) {
+      if (def.typeName === 'ZodOptional' || def.typeName === 'ZodDefault') {
+        required = false;
+      }
+      const next = def.innerType || def.schema;
+      if (!next) break;
+      schema = next;
+      def = schema._def;
+    }
+    return {schema, required};
+  };
+
+  const isPositionalFriendly = (schema: ZodSchema): boolean => {
+    const {schema: unwrapped} = unwrap(schema);
+    return (
+      unwrapped._def.typeName === 'ZodString' ||
+      unwrapped._def.typeName === 'ZodNumber' ||
+      unwrapped._def.typeName === 'ZodEnum'
+    );
+  };
+
+  const requiredEntries = schemaEntries.filter(([, schema]) => unwrap(schema).required);
+  const positionalKeys = requiredEntries
+    .filter(([, schema]) => isPositionalFriendly(schema))
+    .map(([key]) => key);
+
+  const formatCliArg = (value: unknown): string => {
+    if (value === null || value === undefined) {
+      return 'null';
+    }
+    if (typeof value === 'string') {
+      if (value.startsWith('<') && value.endsWith('>')) {
+        return value;
+      }
+      if (/\s/.test(value) || value.includes('"') || value.includes("'")) {
+        return JSON.stringify(value);
+      }
+      return value;
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+    return `'${JSON.stringify(value)}'`;
+  };
+
+  const parts: string[] = ['chrome_devtools', tool.name];
+
+  for (const key of positionalKeys) {
+    const value =
+      key in exampleParams ? (exampleParams as Record<string, unknown>)[key] : `<${key}>`;
+    parts.push(formatCliArg(value));
+  }
+
+  for (const [key, schema] of schemaEntries) {
+    if (positionalKeys.includes(key)) {
+      continue;
+    }
+
+    const hasExample = Object.prototype.hasOwnProperty.call(exampleParams, key);
+    const isRequired = unwrap(schema).required;
+    if (!isRequired && !hasExample) {
+      continue;
+    }
+
+    const value = hasExample
+      ? (exampleParams as Record<string, unknown>)[key]
+      : `<${key}>`;
+
+    const {schema: unwrapped} = unwrap(schema);
+    if (unwrapped._def.typeName === 'ZodBoolean') {
+      if (typeof value === 'boolean') {
+        parts.push(value ? `--${key}` : `--no-${key}`);
+        continue;
+      }
+      parts.push(`--${key}`);
+      parts.push('<true|false>');
+      continue;
+    }
+
+    parts.push(`--${key}`);
+    parts.push(formatCliArg(value));
+  }
+
+  return parts.join(' ');
 }
 
 function generateCliCommandsMarkdown(
@@ -283,16 +380,16 @@ function generateCliCommandsMarkdown(
   markdown +=
     'These commands are generated from the tool definitions. Replace placeholders like `<uid>` and `<insightSetId>`.\n\n';
   markdown +=
-    'Browser/session options (like `--headless`, `--isolated`, `--browserUrl`, `--wsEndpoint`) configure the browser session and should be passed to `session`.\n\n';
-  markdown += '```bash\nnpx -y . session --headless --isolated\n```\n\n';
+    'For multi-step flows (required for `<uid>`-based tools), start a single browser session:\n\n';
+  markdown += '```bash\nchrome_devtools session --headless --isolated --format text\n```\n\n';
   markdown +=
-    'Then send JSON lines like the following to stdin (one line per tool call):\n';
+    'Then run tools as direct commands (you can paste the same lines into `session`; the `chrome_devtools` prefix is optional):\n';
 
   for (const category of sortedCategories) {
     const categoryTools = categories[category];
     const categoryName = labels[category];
     markdown += `\n#### ${categoryName}\n\n`;
-    markdown += '```jsonl\n';
+    markdown += '```bash\n';
 
     // Sort tools within category for stable output
     categoryTools.sort((a: Tool, b: Tool) => a.name.localeCompare(b.name));
@@ -405,6 +502,7 @@ async function generateToolDocumentation(): Promise<void> {
             properties,
             required,
           },
+          schema: tool.schema as unknown as Record<string, ZodSchema>,
           annotations: tool.annotations,
         };
       });

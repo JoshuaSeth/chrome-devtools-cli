@@ -3,7 +3,10 @@
   "version": "0.12.1",
   "description": "MCP server for Chrome DevTools",
   "type": "module",
-  "bin": "./build/src/index.js",
+  "bin": {
+    "chrome-devtools-mcp": "./build/src/index.js",
+    "chrome_devtools": "./build/src/index.js"
+  },
   "main": "index.js",
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('build', {recursive: true, force: true})\"",
