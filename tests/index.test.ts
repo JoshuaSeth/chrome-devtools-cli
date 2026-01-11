@@ -23,6 +23,7 @@ describe('e2e', () => {
       command: 'node',
       args: [
         'build/src/index.js',
+        'mcp',
         '--headless',
         '--isolated',
         '--executable-path',

@@ -5,8 +5,7 @@
  */
 
 import {logger} from '../logger.js';
-import {zod} from '../third_party/index.js';
-import type {Page} from '../third_party/index.js';
+import {DevTools, zod, type Page} from '../third_party/index.js';
 import type {InsightName} from '../trace-processing/parse.js';
 import {
   getInsightOutput,
@@ -191,3 +190,140 @@ async function stopTracingAndAppendOutput(
     context.setIsRunningPerformanceTrace(false);
   }
 }
+
+export const getEventByKey = defineTool({
+  name: 'performance_get_event_by_key',
+  description:
+    'Returns detailed information about a specific event. Use the detail returned to validate performance issues, but do not tell the user about irrelevant raw data from a trace event.',
+  annotations: {
+    category: ToolCategory.PERFORMANCE,
+    readOnlyHint: true,
+  },
+  schema: {
+    eventKey: zod
+      .string()
+      .describe(
+        'The key for the event. This is NOT the name of the event, but the key that has been provided to you as `eventKey` in previous responses, such as `r-1234`.',
+      ),
+  },
+  handler: async (request, response, context) => {
+    const trace = context.recordedTraces().at(-1);
+    if (!trace) {
+      response.appendResponseLine('Error: no trace recorded');
+      return;
+    }
+    const focus = DevTools.AgentFocus.fromParsedTrace(trace.parsedTrace);
+    const event = focus.lookupEvent(
+      request.params
+        .eventKey as DevTools.TraceEngine.Types.File.SerializableKey,
+    );
+    if (!event) {
+      response.appendResponseLine('Error: no event with key found');
+      return;
+    }
+    response.appendResponseLine(`Event:\n${JSON.stringify(event, null, 2)}`);
+  },
+});
+
+export const getMainThreadTrackSummary = defineTool({
+  name: 'performance_get_main_thread_track_summary',
+  description:
+    'Returns a summary of the main thread for the given bounds. The result includes a top-down summary, bottom-up summary, third-parties summary, and a list of related insights for the events within the given bounds.',
+  annotations: {
+    category: ToolCategory.PERFORMANCE,
+    readOnlyHint: true,
+  },
+  schema: {
+    min: zod
+      .number()
+      .describe('The minimum time of the bounds, in microseconds'),
+    max: zod
+      .number()
+      .describe('The maximum time of the bounds, in microseconds'),
+  },
+  handler: async (request, response, context) => {
+    const trace = context.recordedTraces().at(-1);
+    if (!trace) {
+      response.appendResponseLine('Error: no trace recorded');
+      return;
+    }
+    const bounds = createBounds(
+      trace.parsedTrace,
+      request.params.min as DevTools.TraceEngine.Types.Timing.Micro,
+      request.params.max as DevTools.TraceEngine.Types.Timing.Micro,
+    );
+    if (!bounds) {
+      response.appendResponseLine('Error: invalid trace bounds');
+      return;
+    }
+
+    const focus = DevTools.AgentFocus.fromParsedTrace(trace.parsedTrace);
+    const formatter = new DevTools.PerformanceTraceFormatter(focus);
+    response.appendResponseLine(
+      await formatter.formatMainThreadTrackSummary(bounds),
+    );
+  },
+});
+
+export const getNetworkTrackSummary = defineTool({
+  name: 'performance_get_network_track_summary',
+  description: 'Returns a summary of the network for the given bounds.',
+  annotations: {
+    category: ToolCategory.PERFORMANCE,
+    readOnlyHint: true,
+  },
+  schema: {
+    min: zod
+      .number()
+      .describe('The minimum time of the bounds, in microseconds'),
+    max: zod
+      .number()
+      .describe('The maximum time of the bounds, in microseconds'),
+  },
+  handler: async (request, response, context) => {
+    const trace = context.recordedTraces().at(-1);
+    if (!trace) {
+      response.appendResponseLine('Error: no trace recorded');
+      return;
+    }
+    const bounds = createBounds(
+      trace.parsedTrace,
+      request.params.min as DevTools.TraceEngine.Types.Timing.Micro,
+      request.params.max as DevTools.TraceEngine.Types.Timing.Micro,
+    );
+    if (!bounds) {
+      response.appendResponseLine('Error: invalid trace bounds');
+      return;
+    }
+
+    const focus = DevTools.AgentFocus.fromParsedTrace(trace.parsedTrace);
+    const formatter = new DevTools.PerformanceTraceFormatter(focus);
+    response.appendResponseLine(
+      await formatter.formatNetworkTrackSummary(bounds),
+    );
+  },
+});
+
+const createBounds = (
+  trace: DevTools.TraceEngine.TraceModel.ParsedTrace,
+  min: DevTools.TraceEngine.Types.Timing.Micro,
+  max: DevTools.TraceEngine.Types.Timing.Micro,
+): DevTools.TraceEngine.Types.Timing.TraceWindowMicro | null => {
+  if (min > max) {
+    return null;
+  }
+
+  const clampedMin = Math.max(min ?? 0, trace.data.Meta.traceBounds.min);
+  const clampedMax = Math.min(
+    max ?? Number.POSITIVE_INFINITY,
+    trace.data.Meta.traceBounds.max,
+  );
+  if (clampedMin > clampedMax) {
+    return null;
+  }
+
+  return DevTools.TraceEngine.Helpers.Timing.traceWindowFromMicroSeconds(
+    clampedMin as DevTools.TraceEngine.Types.Timing.Micro,
+    clampedMax as DevTools.TraceEngine.Types.Timing.Micro,
+  );
+};

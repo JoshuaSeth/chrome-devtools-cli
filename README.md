@@ -2,12 +2,182 @@
 
 [![npm chrome-devtools-mcp package](https://img.shields.io/npm/v/chrome-devtools-mcp.svg)](https://npmjs.org/package/chrome-devtools-mcp)
 
-`chrome-devtools-mcp` lets your coding agent (such as Gemini, Claude, Cursor or Copilot)
-control and inspect a live Chrome browser. It acts as a Model-Context-Protocol
-(MCP) server, giving your AI coding assistant access to the full power of
-Chrome DevTools for reliable automation, in-depth debugging, and performance analysis.
+`chrome-devtools-mcp` lets your scripts, CLIs, and coding agents control and inspect a live Chrome browser.
+
+This repository is a PitchAI fork that is **CLI-first**: every tool is exposed as a direct command (no MCP
+client required). For compatibility, the legacy MCP server mode is still available via the `mcp` subcommand.
 
 ## [Tool reference](./docs/tool-reference.md) | [Changelog](./CHANGELOG.md) | [Contributing](./CONTRIBUTING.md) | [Troubleshooting](./docs/troubleshooting.md) | [Design Principles](./docs/design-principles.md)
+
+## PitchAI fork: CLI-first (no MCP required)
+
+**What changed vs upstream**
+
+- Default execution is now the direct CLI (tool commands).
+- MCP server mode is still supported, but only when explicitly started with `mcp`.
+
+### Quickstart (local checkout)
+
+```bash
+# build once
+npm ci
+npm run build
+
+# list available tools
+npx -y . list-tools
+
+# run a tool once (starts its own browser session)
+npx -y . take_snapshot
+```
+
+### Direct tool calls (one-shot)
+
+Every tool name is a direct command:
+
+```bash
+npx -y . <tool-name> [--params '<json>'] [chrome-devtools-mcp options]
+```
+
+Example:
+
+```bash
+npx -y . list_pages
+```
+
+### Stateful session (recommended for multi-step flows)
+
+One-shot calls start a fresh browser/context each time, so snapshot `uid`s are not reusable between commands.
+Use `session` to keep state and call multiple tools over stdin/stdout (JSON lines):
+
+```bash
+npx -y . session --headless --isolated
+
+# then send JSON lines like:
+# {"tool":"list_pages","params":{}}
+# {"tool":"take_snapshot","params":{}}
+# {"tool":"click","params":{"uid":"<uid from take_snapshot>"}}
+```
+
+### All direct tool commands
+
+<!-- BEGIN AUTO GENERATED CLI COMMANDS -->
+
+These commands are generated from the tool definitions. Replace placeholders like `<uid>` and `<insightSetId>`.
+
+Browser/session options (like `--headless`, `--isolated`, `--browserUrl`, `--wsEndpoint`) configure the browser session and should be passed to `session`.
+
+```bash
+npx -y . session --headless --isolated
+```
+
+Then send JSON lines like the following to stdin (one line per tool call):
+
+#### Input automation
+
+```jsonl
+{"tool":"click","params":{"uid":"<uid>"}}
+{"tool":"drag","params":{"from_uid":"<uid>","to_uid":"<uid>"}}
+{"tool":"fill","params":{"uid":"<uid>","value":"Example text"}}
+{"tool":"fill_form","params":{"elements":[{"uid":"<uid>","value":"Example text"}]}}
+{"tool":"handle_dialog","params":{"action":"accept"}}
+{"tool":"hover","params":{"uid":"<uid>"}}
+{"tool":"press_key","params":{"key":"Enter"}}
+{"tool":"upload_file","params":{"uid":"<uid>","filePath":"/absolute/path/to/file"}}
+```
+
+#### Navigation automation
+
+```jsonl
+{"tool":"close_page","params":{"pageId":2}}
+{"tool":"list_pages","params":{}}
+{"tool":"navigate_page","params":{"url":"https://example.com"}}
+{"tool":"new_page","params":{"url":"https://example.com"}}
+{"tool":"select_page","params":{"pageId":1}}
+{"tool":"wait_for","params":{"text":"Example text"}}
+```
+
+#### Emulation
+
+```jsonl
+{"tool":"emulate","params":{"networkConditions":"Slow 3G","cpuThrottlingRate":4}}
+{"tool":"resize_page","params":{"width":1280,"height":720}}
+```
+
+#### Performance
+
+```jsonl
+{"tool":"performance_analyze_insight","params":{"insightSetId":"<insightSetId>","insightName":"LCPBreakdown"}}
+{"tool":"performance_get_event_by_key","params":{"eventKey":"r-123"}}
+{"tool":"performance_get_main_thread_track_summary","params":{"min":0,"max":1000000}}
+{"tool":"performance_get_network_track_summary","params":{"min":0,"max":1000000}}
+{"tool":"performance_start_trace","params":{"reload":true,"autoStop":true}}
+{"tool":"performance_stop_trace","params":{}}
+```
+
+#### Network
+
+```jsonl
+{"tool":"get_network_request","params":{"reqid":1}}
+{"tool":"list_network_requests","params":{"pageSize":25,"pageIdx":0}}
+```
+
+#### Debugging
+
+```jsonl
+{"tool":"evaluate_script","params":{"function":"() => document.title"}}
+{"tool":"get_console_message","params":{"msgid":1}}
+{"tool":"list_console_messages","params":{"pageSize":25,"pageIdx":0}}
+{"tool":"take_change_snapshot","params":{"baselineKey":"default"}}
+{"tool":"take_screenshot","params":{"fullPage":true}}
+{"tool":"take_snapshot","params":{"verbose":false}}
+```
+
+<!-- END AUTO GENERATED CLI COMMANDS -->
+
+### PitchAI-added tools & commands
+
+#### `session` (CLI command)
+
+Stateful JSON-lines runner for calling multiple tools in one browser/context:
+
+```bash
+npx -y . session --headless --isolated
+
+# then send JSON lines like:
+# {"tool":"list_pages","params":{}}
+# {"tool":"take_snapshot","params":{}}
+# {"tool":"click","params":{"uid":"<uid from take_snapshot>"}}
+```
+
+#### `take_change_snapshot` (tool)
+
+Diff-only AX snapshot for dynamic UIs (baseline is stored in-memory, so this needs `session`):
+
+```jsonl
+{"tool":"take_change_snapshot","params":{"baselineKey":"default","replaceBaseline":true}}
+{"tool":"wait_for","params":{"text":"Loaded"}}
+{"tool":"take_change_snapshot","params":{"baselineKey":"default","replaceBaseline":true}}
+```
+
+#### Extra performance trace helpers (tools)
+
+These require a previously recorded trace in the same `session`:
+
+```jsonl
+{"tool":"performance_start_trace","params":{"reload":true,"autoStop":true}}
+{"tool":"performance_analyze_insight","params":{"insightSetId":"<insightSetId>","insightName":"LCPBreakdown"}}
+{"tool":"performance_get_event_by_key","params":{"eventKey":"r-123"}}
+{"tool":"performance_get_main_thread_track_summary","params":{"min":0,"max":1000000}}
+{"tool":"performance_get_network_track_summary","params":{"min":0,"max":1000000}}
+```
+
+### Legacy MCP server mode (optional)
+
+Start the MCP server:
+
+```bash
+npx -y . mcp --headless --isolated
+```
 
 ## Key features
 
@@ -22,10 +192,9 @@ Chrome DevTools for reliable automation, in-depth debugging, and performance ana
 
 ## Disclaimers
 
-`chrome-devtools-mcp` exposes content of the browser instance to the MCP clients
-allowing them to inspect, debug, and modify any data in the browser or DevTools.
-Avoid sharing sensitive or personal information that you don't want to share with
-MCP clients.
+`chrome-devtools-mcp` exposes content of the browser instance to whoever runs it (CLI, scripts, or MCP
+clients), allowing them to inspect, debug, and modify any data in the browser or DevTools. Avoid sharing
+sensitive or personal information that you don't want to expose.
 
 ## Requirements
 
@@ -33,16 +202,17 @@ MCP clients.
 - [Chrome](https://www.google.com/chrome/) current stable version or newer.
 - [npm](https://www.npmjs.com/).
 
-## Getting started
+<!--
+## MCP server mode (optional)
 
-Add the following config to your MCP client:
+If you need this as an MCP server, configure your MCP client to run the `mcp` subcommand:
 
 ```json
 {
   "mcpServers": {
     "chrome-devtools": {
       "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@latest"]
+      "args": ["-y", "chrome-devtools-mcp@latest", "mcp"]
     }
   }
 }
@@ -58,7 +228,7 @@ Add the following config to your MCP client:
   Follow https://ampcode.com/manual#mcp and use the config provided above. You can also install the Chrome DevTools MCP server using the CLI:
 
 ```bash
-amp mcp add chrome-devtools -- npx chrome-devtools-mcp@latest
+amp mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest mcp
 ```
 
 </details>
@@ -74,9 +244,10 @@ To use the Chrome DevTools MCP server follow the instructions from <a href="http
     "chrome-devtools": {
       "command": "npx",
       "args": [
+        "-y",
         "chrome-devtools-mcp@latest",
-        "--browser-url=http://127.0.0.1:9222",
-        "-y"
+        "mcp",
+        "--browser-url=http://127.0.0.1:9222"
       ]
     }
   }
@@ -94,7 +265,7 @@ Chrome DevTools MCP will not start the browser instance automatically using this
     Use the Claude Code CLI to add the Chrome DevTools MCP server (<a href="https://docs.anthropic.com/en/docs/claude-code/mcp">guide</a>):
 
 ```bash
-claude mcp add chrome-devtools npx chrome-devtools-mcp@latest
+claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest mcp
 ```
 
 </details>
@@ -110,7 +281,7 @@ claude mcp add chrome-devtools npx chrome-devtools-mcp@latest
   using the standard config from above. You can also install the Chrome DevTools MCP server using the Codex CLI:
 
 ```bash
-codex mcp add chrome-devtools -- npx chrome-devtools-mcp@latest
+codex mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest mcp
 ```
 
 **On Windows 11**
@@ -125,6 +296,7 @@ args = [
     "npx",
     "-y",
     "chrome-devtools-mcp@latest",
+    "mcp",
 ]
 env = { SystemRoot="C:\\Windows", PROGRAMFILES="C:\\Program Files" }
 startup_timeout_ms = 20_000
@@ -151,7 +323,7 @@ Configure the following fields and press `CTRL+S` to save the configuration:
 
 - **Server name:** `chrome-devtools`
 - **Server Type:** `[1] Local`
-- **Command:** `npx -y chrome-devtools-mcp@latest`
+- **Command:** `npx -y chrome-devtools-mcp@latest mcp`
 
 </details>
 
@@ -193,7 +365,7 @@ Go to `Cursor Settings` -> `MCP` -> `New MCP Server`. Use the config provided ab
 Use the Factory CLI to add the Chrome DevTools MCP server (<a href="https://docs.factory.ai/cli/configuration/mcp">guide</a>):
 
 ```bash
-droid mcp add chrome-devtools "npx -y chrome-devtools-mcp@latest"
+droid mcp add chrome-devtools "npx -y chrome-devtools-mcp@latest mcp"
 ```
 
 </details>
@@ -205,13 +377,13 @@ Install the Chrome DevTools MCP server using the Gemini CLI.
 **Project wide:**
 
 ```bash
-gemini mcp add chrome-devtools npx chrome-devtools-mcp@latest
+gemini mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest mcp
 ```
 
 **Globally:**
 
 ```bash
-gemini mcp add -s user chrome-devtools npx chrome-devtools-mcp@latest
+gemini mcp add -s user chrome-devtools -- npx -y chrome-devtools-mcp@latest mcp
 ```
 
 Alternatively, follow the <a href="https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md#how-to-set-up-your-mcp-server">MCP guide</a> and use the standard config from above.
@@ -252,7 +424,7 @@ Add the following configuration to your `opencode.json` file. If you don't have 
   "mcp": {
     "chrome-devtools": {
       "type": "local",
-      "command": ["npx", "-y", "chrome-devtools-mcp@latest"]
+      "command": ["npx", "-y", "chrome-devtools-mcp@latest", "mcp"]
     }
   }
 }
@@ -277,13 +449,13 @@ Install the Chrome DevTools MCP server using the Qoder CLI (<a href="https://doc
 **Project wide:**
 
 ```bash
-qodercli mcp add chrome-devtools -- npx chrome-devtools-mcp@latest
+qodercli mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest mcp
 ```
 
 **Globally:**
 
 ```bash
-qodercli mcp add -s user chrome-devtools -- npx chrome-devtools-mcp@latest
+qodercli mcp add -s user chrome-devtools -- npx -y chrome-devtools-mcp@latest mcp
 ```
 
 </details>
@@ -322,6 +494,7 @@ Your MCP client should open the browser and record a performance trace.
 > [!NOTE]  
 > The MCP server will start the browser automatically once the MCP client uses a tool that requires a running browser instance. Connecting to the Chrome DevTools MCP server on its own will not automatically start the browser.
 
+-->
 ## Tools
 
 If you run into any issues, checkout our [troubleshooting guide](./docs/troubleshooting.md).
@@ -347,17 +520,21 @@ If you run into any issues, checkout our [troubleshooting guide](./docs/troubles
 - **Emulation** (2 tools)
   - [`emulate`](docs/tool-reference.md#emulate)
   - [`resize_page`](docs/tool-reference.md#resize_page)
-- **Performance** (3 tools)
+- **Performance** (6 tools)
   - [`performance_analyze_insight`](docs/tool-reference.md#performance_analyze_insight)
+  - [`performance_get_event_by_key`](docs/tool-reference.md#performance_get_event_by_key)
+  - [`performance_get_main_thread_track_summary`](docs/tool-reference.md#performance_get_main_thread_track_summary)
+  - [`performance_get_network_track_summary`](docs/tool-reference.md#performance_get_network_track_summary)
   - [`performance_start_trace`](docs/tool-reference.md#performance_start_trace)
   - [`performance_stop_trace`](docs/tool-reference.md#performance_stop_trace)
 - **Network** (2 tools)
   - [`get_network_request`](docs/tool-reference.md#get_network_request)
   - [`list_network_requests`](docs/tool-reference.md#list_network_requests)
-- **Debugging** (5 tools)
+- **Debugging** (6 tools)
   - [`evaluate_script`](docs/tool-reference.md#evaluate_script)
   - [`get_console_message`](docs/tool-reference.md#get_console_message)
   - [`list_console_messages`](docs/tool-reference.md#list_console_messages)
+  - [`take_change_snapshot`](docs/tool-reference.md#take_change_snapshot)
   - [`take_screenshot`](docs/tool-reference.md#take_screenshot)
   - [`take_snapshot`](docs/tool-reference.md#take_snapshot)
 
@@ -365,7 +542,7 @@ If you run into any issues, checkout our [troubleshooting guide](./docs/troubles
 
 ## Configuration
 
-The Chrome DevTools MCP server supports the following configuration option:
+The CLI (and legacy `mcp` subcommand) supports the following configuration options:
 
 <!-- BEGIN AUTO GENERATED OPTIONS -->
 
@@ -445,53 +622,31 @@ The Chrome DevTools MCP server supports the following configuration option:
 
 <!-- END AUTO GENERATED OPTIONS -->
 
-Pass them via the `args` property in the JSON configuration. For example:
+Pass these flags to any direct tool command, `call`, or `session`. For example:
 
-```json
-{
-  "mcpServers": {
-    "chrome-devtools": {
-      "command": "npx",
-      "args": [
-        "chrome-devtools-mcp@latest",
-        "--channel=canary",
-        "--headless=true",
-        "--isolated=true"
-      ]
-    }
-  }
-}
+```bash
+npx -y . list_pages --channel=canary --headless --isolated
 ```
 
 ### Connecting via WebSocket with custom headers
 
 You can connect directly to a Chrome WebSocket endpoint and include custom headers (e.g., for authentication):
 
-```json
-{
-  "mcpServers": {
-    "chrome-devtools": {
-      "command": "npx",
-      "args": [
-        "chrome-devtools-mcp@latest",
-        "--wsEndpoint=ws://127.0.0.1:9222/devtools/browser/<id>",
-        "--wsHeaders={\"Authorization\":\"Bearer YOUR_TOKEN\"}"
-      ]
-    }
-  }
-}
+```bash
+npx -y . list_pages \
+  --wsEndpoint=ws://127.0.0.1:9222/devtools/browser/<id> \
+  --wsHeaders='{"Authorization":"Bearer YOUR_TOKEN"}'
 ```
 
 To get the WebSocket endpoint from a running Chrome instance, visit `http://127.0.0.1:9222/json/version` and look for the `webSocketDebuggerUrl` field.
 
-You can also run `npx chrome-devtools-mcp@latest --help` to see all available configuration options.
+You can also run `npx -y . --help` (CLI) or `npx -y . mcp --help` (legacy MCP server) to see available options.
 
 ## Concepts
 
 ### User data directory
 
-`chrome-devtools-mcp` starts a Chrome's stable channel instance using the following user
-data directory:
+`chrome-devtools-mcp` starts Chrome using the following user data directory:
 
 - Linux / macOS: `$HOME/.cache/chrome-devtools-mcp/chrome-profile-$CHANNEL`
 - Windows: `%HOMEPATH%/.cache/chrome-devtools-mcp/chrome-profile-$CHANNEL`
@@ -503,15 +658,15 @@ the browser is closed.
 
 ### Connecting to a running Chrome instance
 
-By default, the Chrome DevTools MCP server will start a new Chrome instance with a dedicated profile. This might not be ideal in all situations:
+By default, the CLI starts a new Chrome instance with a dedicated profile. This might not be ideal in all situations:
 
 - If you would like to maintain the same application state when alternating between manual site testing and agent-driven testing.
-- When the MCP needs to sign into a website. Some accounts may prevent sign-in when the browser is controlled via WebDriver (the default launch mechanism for the Chrome DevTools MCP server).
+- When you need to sign into a website. Some accounts may prevent sign-in when the browser is controlled via WebDriver (the default launch mechanism).
 - If you're running your LLM inside a sandboxed environment, but you would like to connect to a Chrome instance that runs outside the sandbox.
 
-In these cases, start Chrome first and let the Chrome DevTools MCP server connect to it. There are two ways to do so:
+In these cases, start Chrome first and let `chrome-devtools-mcp` connect to it. There are two ways to do so:
 
-- **Automatic connection (available in Chrome 144)**: best for sharing state between manual and agent-driven testing.
+- **Automatic connection (available in Chrome 145+)**: best for sharing state between manual and agent-driven testing.
 - **Manual connection via remote debugging port**: best when running inside a sandboxed environment.
 
 #### Automatically connecting to a running Chrome instance
@@ -523,75 +678,25 @@ In Chrome (\>= M144), do the following to set up remote debugging:
 1.  Navigate to `chrome://inspect/#remote-debugging` to enable remote debugging.
 2.  Follow the dialog UI to allow or disallow incoming debugging connections.
 
-**Step 2:** Configure Chrome DevTools MCP server to automatically connect to a running Chrome Instance
+**Step 2:** Run `chrome-devtools-mcp` with `--autoConnect`
 
-To connect the `chrome-devtools-mcp` server to the running Chrome instance, use
-`--autoConnect` command line argument for the MCP server.
+To connect `chrome-devtools-mcp` to the running Chrome instance, use `--autoConnect`:
 
-The following code snippet is an example configuration for gemini-cli:
-
-```json
-{
-  "mcpServers": {
-    "chrome-devtools": {
-      "command": "npx",
-      "args": ["chrome-devtools-mcp@latest", "--autoConnect", "--channel=beta"]
-    }
-  }
-}
-```
-
-Note: you have to specify `--channel=beta` until Chrome M144 has reached the
-stable channel.
-
-**Step 3:** Test your setup
-
-Make sure your browser is running. Open gemini-cli and run the following prompt:
-
-```none
-Check the performance of https://developers.chrome.com
+```bash
+npx -y . list_pages --autoConnect --channel=stable
 ```
 
 > [!NOTE]  
-> The <code>autoConnect</code> option requires the user to start Chrome. If the user has multiple active profiles, the MCP server will connect to the default profile (as determined by Chrome). The MCP server has access to all open windows for the selected profile.
-
-The Chrome DevTools MCP server will try to connect to your running Chrome
-instance. It shows a dialog asking for user permission.
-
-Clicking **Allow** results in the Chrome DevTools MCP server opening
-[developers.chrome.com](http://developers.chrome.com) and taking a performance
-trace.
+> `--autoConnect` requires you to start Chrome and grant permission in the Chrome UI. If you have multiple active profiles, Chrome will choose the default profile (as determined by Chrome).
 
 #### Manual connection using port forwarding
 
-You can connect to a running Chrome instance by using the `--browser-url` option. This is useful if you are running the MCP server in a sandboxed environment that does not allow starting a new Chrome instance.
-
-Here is a step-by-step guide on how to connect to a running Chrome instance:
-
-**Step 1: Configure the MCP client**
-
-Add the `--browser-url` option to your MCP client configuration. The value of this option should be the URL of the running Chrome instance. `http://127.0.0.1:9222` is a common default.
-
-```json
-{
-  "mcpServers": {
-    "chrome-devtools": {
-      "command": "npx",
-      "args": [
-        "chrome-devtools-mcp@latest",
-        "--browser-url=http://127.0.0.1:9222"
-      ]
-    }
-  }
-}
-```
-
-**Step 2: Start the Chrome browser**
+You can connect to a running Chrome instance by using `--browser-url` (or `--wsEndpoint`). This is useful if you are running in an environment that does not allow starting a new Chrome instance.
 
 > [!WARNING]  
 > Enabling the remote debugging port opens up a debugging port on the running browser instance. Any application on your machine can connect to this port and control the browser. Make sure that you are not browsing any sensitive websites while the debugging port is open.
 
-Start the Chrome browser with the remote debugging port enabled. Make sure to close any running Chrome instances before starting a new one with the debugging port enabled. The port number you choose must be the same as the one you specified in the `--browser-url` option in your MCP client configuration.
+Start the Chrome browser with the remote debugging port enabled. Make sure to close any running Chrome instances before starting a new one with the debugging port enabled.
 
 For security reasons, [Chrome requires you to use a non-default user data directory](https://developer.chrome.com/blog/remote-debugging-port) when enabling the remote debugging port. You can specify a custom directory using the `--user-data-dir` flag. This ensures that your regular browsing profile and data are not exposed to the debugging session.
 
@@ -613,15 +718,11 @@ For security reasons, [Chrome requires you to use a non-default user data direct
 "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="%TEMP%\chrome-profile-stable"
 ```
 
-**Step 3: Test your setup**
+Then connect:
 
-After configuring the MCP client and starting the Chrome browser, you can test your setup by running a simple prompt in your MCP client:
-
+```bash
+npx -y . list_pages --browser-url=http://127.0.0.1:9222
 ```
-Check the performance of https://developers.chrome.com
-```
-
-Your MCP client should connect to the running Chrome instance and receive a performance report.
 
 If you hit VM-to-host port forwarding issues, see the “Remote debugging between virtual machine (VM) and host fails” section in [`docs/troubleshooting.md`](./docs/troubleshooting.md#remote-debugging-between-virtual-machine-vm-and-host-fails).
 
@@ -631,9 +732,4 @@ For more details on remote debugging, see the [Chrome DevTools documentation](ht
 
 ### Operating system sandboxes
 
-Some MCP clients allow sandboxing the MCP server using macOS Seatbelt or Linux
-containers. If sandboxes are enabled, `chrome-devtools-mcp` is not able to start
-Chrome that requires permissions to create its own sandboxes. As a workaround,
-either disable sandboxing for `chrome-devtools-mcp` in your MCP client or use
-`--browser-url` to connect to a Chrome instance that you start manually outside
-of the MCP client sandbox.
+If you run `chrome-devtools-mcp` in an OS sandbox (macOS Seatbelt, Linux containers, etc.), it may not be able to launch Chrome (Chrome needs permissions to create its own sandboxes). As a workaround, start Chrome outside the sandbox and use `--browser-url` (or `--wsEndpoint`) to connect.

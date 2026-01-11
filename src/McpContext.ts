@@ -29,6 +29,7 @@ import {takeSnapshot} from './tools/snapshot.js';
 import {CLOSE_PAGE_ERROR} from './tools/ToolDefinition.js';
 import type {Context, DevToolsData} from './tools/ToolDefinition.js';
 import type {TraceResult} from './trace-processing/parse.js';
+import type {NormalizedSnapshot} from './utils/accessibilityDiff.js';
 import {WaitForHelper} from './WaitForHelper.js';
 
 export interface TextSnapshotNode extends SerializedAXNode {
@@ -116,6 +117,8 @@ export class McpContext implements Context {
 
   #nextSnapshotId = 1;
   #traceResults: TraceResult[] = [];
+
+  #accessibilityBaselines = new Map<string, NormalizedSnapshot>();
 
   #locatorClass: typeof Locator;
   #options: McpContextOptions;
@@ -586,6 +589,14 @@ export class McpContext implements Context {
 
   getTextSnapshot(): TextSnapshot | null {
     return this.#textSnapshot;
+  }
+
+  getAccessibilityBaseline(key: string): NormalizedSnapshot | undefined {
+    return this.#accessibilityBaselines.get(key);
+  }
+
+  setAccessibilityBaseline(key: string, baseline: NormalizedSnapshot): void {
+    this.#accessibilityBaselines.set(key, baseline);
   }
 
   async saveTemporaryFile(

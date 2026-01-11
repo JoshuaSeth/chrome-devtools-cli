@@ -14,6 +14,10 @@ import {tools} from '../build/src/tools/tools.js';
 
 const OUTPUT_PATH = './docs/tool-reference.md';
 const README_PATH = './README.md';
+const CLI_COMMANDS_README_BEGIN_MARKER =
+  '<!-- BEGIN AUTO GENERATED CLI COMMANDS -->';
+const CLI_COMMANDS_README_END_MARKER =
+  '<!-- END AUTO GENERATED CLI COMMANDS -->';
 
 // Extend the MCP Tool type to include our annotations
 interface ToolWithAnnotations extends Tool {
@@ -195,6 +199,111 @@ function updateReadmeWithOptionsMarkdown(optionsMarkdown: string): void {
 
   fs.writeFileSync(README_PATH, updatedContent);
   console.log('Updated README.md with options markdown');
+}
+
+function updateReadmeWithCliCommandsMarkdown(
+  cliCommandsMarkdown: string,
+): void {
+  const readmeContent = fs.readFileSync(README_PATH, 'utf8');
+
+  const beginIndex = readmeContent.indexOf(CLI_COMMANDS_README_BEGIN_MARKER);
+  const endIndex = readmeContent.indexOf(CLI_COMMANDS_README_END_MARKER);
+
+  if (beginIndex === -1 || endIndex === -1) {
+    console.warn(
+      'Could not find auto-generated CLI commands markers in README.md',
+    );
+    return;
+  }
+
+  const before = readmeContent.substring(
+    0,
+    beginIndex + CLI_COMMANDS_README_BEGIN_MARKER.length,
+  );
+  const after = readmeContent.substring(endIndex);
+
+  const updatedContent = before + '\n\n' + cliCommandsMarkdown + '\n\n' + after;
+
+  fs.writeFileSync(README_PATH, updatedContent);
+  console.log('Updated README.md with CLI commands');
+}
+
+const TOOL_CLI_EXAMPLE_PARAMS: Record<string, Record<string, unknown> | null> =
+  {
+    click: {uid: '<uid>'},
+    close_page: {pageId: 2},
+    drag: {from_uid: '<uid>', to_uid: '<uid>'},
+    emulate: {networkConditions: 'Slow 3G', cpuThrottlingRate: 4},
+    evaluate_script: {function: '() => document.title'},
+    fill: {uid: '<uid>', value: 'Example text'},
+    fill_form: {elements: [{uid: '<uid>', value: 'Example text'}]},
+    get_console_message: {msgid: 1},
+    get_network_request: {reqid: 1},
+    handle_dialog: {action: 'accept'},
+    hover: {uid: '<uid>'},
+    list_console_messages: {pageSize: 25, pageIdx: 0},
+    list_network_requests: {pageSize: 25, pageIdx: 0},
+    list_pages: null,
+    navigate_page: {url: 'https://example.com'},
+    new_page: {url: 'https://example.com'},
+    performance_analyze_insight: {
+      insightSetId: '<insightSetId>',
+      insightName: 'LCPBreakdown',
+    },
+    performance_get_event_by_key: {eventKey: 'r-123'},
+    performance_get_main_thread_track_summary: {min: 0, max: 1_000_000},
+    performance_get_network_track_summary: {min: 0, max: 1_000_000},
+    performance_start_trace: {reload: true, autoStop: true},
+    performance_stop_trace: null,
+    press_key: {key: 'Enter'},
+    resize_page: {width: 1280, height: 720},
+    select_page: {pageId: 1},
+    take_change_snapshot: {baselineKey: 'default'},
+    take_screenshot: {fullPage: true},
+    take_snapshot: {verbose: false},
+    upload_file: {uid: '<uid>', filePath: '/absolute/path/to/file'},
+    wait_for: {text: 'Example text'},
+  };
+
+function getCliCommandForTool(tool: ToolWithAnnotations): string {
+  const exampleParams = TOOL_CLI_EXAMPLE_PARAMS[tool.name];
+  const paramsObject = exampleParams ?? {};
+  return JSON.stringify({
+    tool: tool.name,
+    params: paramsObject,
+  });
+}
+
+function generateCliCommandsMarkdown(
+  categories: Record<string, ToolWithAnnotations[]>,
+  sortedCategories: string[],
+): string {
+  let markdown = '';
+
+  markdown +=
+    'These commands are generated from the tool definitions. Replace placeholders like `<uid>` and `<insightSetId>`.\n\n';
+  markdown +=
+    'Browser/session options (like `--headless`, `--isolated`, `--browserUrl`, `--wsEndpoint`) configure the browser session and should be passed to `session`.\n\n';
+  markdown += '```bash\nnpx -y . session --headless --isolated\n```\n\n';
+  markdown +=
+    'Then send JSON lines like the following to stdin (one line per tool call):\n';
+
+  for (const category of sortedCategories) {
+    const categoryTools = categories[category];
+    const categoryName = labels[category];
+    markdown += `\n#### ${categoryName}\n\n`;
+    markdown += '```jsonl\n';
+
+    // Sort tools within category for stable output
+    categoryTools.sort((a: Tool, b: Tool) => a.name.localeCompare(b.name));
+    for (const tool of categoryTools) {
+      markdown += `${getCliCommandForTool(tool)}\n`;
+    }
+
+    markdown += '```\n';
+  }
+
+  return markdown.trim();
 }
 
 // Helper to convert Zod schema to JSON schema-like object for docs
@@ -438,6 +547,13 @@ async function generateToolDocumentation(): Promise<void> {
     // Generate and update configuration options
     const optionsMarkdown = generateConfigOptionsMarkdown();
     updateReadmeWithOptionsMarkdown(optionsMarkdown);
+
+    // Generate and update CLI commands examples
+    const cliCommandsMarkdown = generateCliCommandsMarkdown(
+      categories,
+      sortedCategories,
+    );
+    updateReadmeWithCliCommandsMarkdown(cliCommandsMarkdown);
     process.exit(0);
   } catch (error) {
     console.error('Error generating documentation:', error);

@@ -21,17 +21,21 @@
 - **[Emulation](#emulation)** (2 tools)
   - [`emulate`](#emulate)
   - [`resize_page`](#resize_page)
-- **[Performance](#performance)** (3 tools)
+- **[Performance](#performance)** (6 tools)
   - [`performance_analyze_insight`](#performance_analyze_insight)
+  - [`performance_get_event_by_key`](#performance_get_event_by_key)
+  - [`performance_get_main_thread_track_summary`](#performance_get_main_thread_track_summary)
+  - [`performance_get_network_track_summary`](#performance_get_network_track_summary)
   - [`performance_start_trace`](#performance_start_trace)
   - [`performance_stop_trace`](#performance_stop_trace)
 - **[Network](#network)** (2 tools)
   - [`get_network_request`](#get_network_request)
   - [`list_network_requests`](#list_network_requests)
-- **[Debugging](#debugging)** (5 tools)
+- **[Debugging](#debugging)** (6 tools)
   - [`evaluate_script`](#evaluate_script)
   - [`get_console_message`](#get_console_message)
   - [`list_console_messages`](#list_console_messages)
+  - [`take_change_snapshot`](#take_change_snapshot)
   - [`take_screenshot`](#take_screenshot)
   - [`take_snapshot`](#take_snapshot)
 
@@ -226,6 +230,38 @@
 
 ---
 
+### `performance_get_event_by_key`
+
+**Description:** Returns detailed information about a specific event. Use the detail returned to validate performance issues, but do not tell the user about irrelevant raw data from a trace event.
+
+**Parameters:**
+
+- **eventKey** (string) **(required)**: The key for the event. This is NOT the name of the event, but the key that has been provided to you as `eventKey` in previous responses, such as `r-1234`.
+
+---
+
+### `performance_get_main_thread_track_summary`
+
+**Description:** Returns a summary of the main thread for the given bounds. The result includes a top-down summary, bottom-up summary, third-parties summary, and a list of related insights for the events within the given bounds.
+
+**Parameters:**
+
+- **max** (number) **(required)**: The maximum time of the bounds, in microseconds
+- **min** (number) **(required)**: The minimum time of the bounds, in microseconds
+
+---
+
+### `performance_get_network_track_summary`
+
+**Description:** Returns a summary of the network for the given bounds.
+
+**Parameters:**
+
+- **max** (number) **(required)**: The maximum time of the bounds, in microseconds
+- **min** (number) **(required)**: The minimum time of the bounds, in microseconds
+
+---
+
 ### `performance_start_trace`
 
 **Description:** Starts a performance trace recording on the selected page. This can be used to look for performance problems and insights to improve the performance of the page. It will also report Core Web Vital (CWV) scores for the page.
@@ -280,12 +316,12 @@ so returned values have to JSON-serializable.
 **Parameters:**
 
 - **function** (string) **(required)**: A JavaScript function declaration to be executed by the tool in the currently selected page.
-  Example without arguments: `() => {
+Example without arguments: `() => {
   return document.title
 }` or `async () => {
   return await fetch("example.com")
 }`.
-  Example with arguments: `(el) => {
+Example with arguments: `(el) => {
   return el.innerText;
 }`
 
@@ -313,6 +349,18 @@ so returned values have to JSON-serializable.
 - **pageIdx** (integer) _(optional)_: Page number to return (0-based). When omitted, returns the first page.
 - **pageSize** (integer) _(optional)_: Maximum number of messages to return. When omitted, returns all requests.
 - **types** (array) _(optional)_: Filter messages to only return messages of the specified resource types. When omitted or empty, returns all messages.
+
+---
+
+### `take_change_snapshot`
+
+**Description:** Capture accessibility (AX) changes compared to a stored baseline and report only the differences. Use this when you are polling dynamic views—think WebSocket chats, live dashboards, or any SPA regions that refresh while you wait—to confirm that expected elements appeared or attributes flipped without flooding the context with the entire tree.
+
+**Parameters:**
+
+- **baselineKey** (string) _(optional)_: Identifier used to store the baseline snapshot. Defaults to "default".
+- **compareTo** (string) _(optional)_: Compare against a different baseline key. When omitted, compares against the same key as baselineKey.
+- **replaceBaseline** (boolean) _(optional)_: Whether to replace the stored baseline with the latest snapshot. Defaults to true.
 
 ---
 

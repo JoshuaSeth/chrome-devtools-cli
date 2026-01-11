@@ -25,11 +25,7 @@ import {
 import {ToolCategory} from './tools/categories.js';
 import type {ToolDefinition} from './tools/ToolDefinition.js';
 import {tools} from './tools/tools.js';
-
-// If moved update release-please config
-// x-release-please-start-version
-const VERSION = '0.12.1';
-// x-release-please-end
+import {VERSION} from './version.js';
 
 export const args = parseArguments(VERSION);
 

@@ -31,4 +31,10 @@ if (major < 20) {
   process.exit(1);
 }
 
-await import('./main.js');
+const maybeMode = process.argv[2];
+if (maybeMode === 'mcp') {
+  process.argv.splice(2, 1);
+  await import('./main.js');
+} else {
+  await import('./cliApp.js');
+}

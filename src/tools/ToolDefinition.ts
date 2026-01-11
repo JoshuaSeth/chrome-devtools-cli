@@ -4,10 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type {TextSnapshotNode, GeolocationOptions} from '../McpContext.js';
+import type {
+  GeolocationOptions,
+  TextSnapshot,
+  TextSnapshotNode,
+} from '../McpContext.js';
 import {zod} from '../third_party/index.js';
 import type {Dialog, ElementHandle, Page} from '../third_party/index.js';
 import type {TraceResult} from '../trace-processing/parse.js';
+import type {NormalizedSnapshot} from '../utils/accessibilityDiff.js';
 import type {PaginationOptions} from '../utils/types.js';
 
 import type {ToolCategory} from './categories.js';
@@ -87,6 +92,13 @@ export type Context = Readonly<{
   setIsRunningPerformanceTrace(x: boolean): void;
   recordedTraces(): TraceResult[];
   storeTraceRecording(result: TraceResult): void;
+  createTextSnapshot(
+    verbose?: boolean,
+    devtoolsData?: DevToolsData | undefined,
+  ): Promise<void>;
+  getTextSnapshot(): TextSnapshot | null;
+  getAccessibilityBaseline(key: string): NormalizedSnapshot | undefined;
+  setAccessibilityBaseline(key: string, baseline: NormalizedSnapshot): void;
   getSelectedPage(): Page;
   getDialog(): Dialog | undefined;
   clearDialog(): void;

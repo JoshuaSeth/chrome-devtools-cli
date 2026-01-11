@@ -7,7 +7,12 @@
 import assert from 'node:assert';
 import {describe, it} from 'node:test';
 
-import {takeSnapshot, waitFor} from '../../src/tools/snapshot.js';
+import {McpResponse} from '../../src/McpResponse.js';
+import {
+  takeChangeSnapshot,
+  takeSnapshot,
+  waitFor,
+} from '../../src/tools/snapshot.js';
 import {html, withMcpContext} from '../utils.js';
 
 describe('snapshot', () => {
@@ -16,6 +21,54 @@ describe('snapshot', () => {
       await withMcpContext(async (response, context) => {
         await takeSnapshot.handler({params: {}}, response, context);
         assert.ok(response.includeSnapshot);
+      });
+    });
+  });
+  describe('take_change_snapshot', () => {
+    it('creates a baseline and then reports diffs', async () => {
+      await withMcpContext(async (_response, context) => {
+        const page = context.getSelectedPage();
+        await page.setContent(html`<main><div>Hello</div></main>`);
+
+        const baselineResponse = new McpResponse();
+        await takeChangeSnapshot.handler(
+          {params: {baselineKey: 'default'}},
+          baselineResponse,
+          context,
+        );
+
+        assert.match(
+          baselineResponse.responseLines.join('\n'),
+          /No baseline found/,
+        );
+
+        await page.setContent(
+          html`<main><div>Hello</div><div>World</div></main>`,
+        );
+
+        const diffResponse = new McpResponse();
+        await takeChangeSnapshot.handler(
+          {params: {baselineKey: 'default'}},
+          diffResponse,
+          context,
+        );
+
+        assert.match(
+          diffResponse.responseLines.join('\n'),
+          /Accessibility changes compared to baseline/,
+        );
+
+        const noChangeResponse = new McpResponse();
+        await takeChangeSnapshot.handler(
+          {params: {baselineKey: 'default'}},
+          noChangeResponse,
+          context,
+        );
+
+        assert.match(
+          noChangeResponse.responseLines.join('\n'),
+          /No accessibility changes compared to baseline/,
+        );
       });
     });
   });
