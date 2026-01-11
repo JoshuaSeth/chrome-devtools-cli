@@ -6,6 +6,12 @@ CLI-first fork of `ChromeDevTools/chrome-devtools-mcp`.
 toolset as upstream, but **without requiring an MCP client/server integration**. This is designed for environments like
 Codex CLI and Claude “skills” that can shell out to a command.
 
+## Attribution & no endorsement
+
+- Upstream project: `https://github.com/ChromeDevTools/chrome-devtools-mcp` (Apache-2.0).
+- This fork is **not affiliated with, endorsed by, or sponsored by** Google LLC, Chrome DevTools, or the Chromium project.
+- “Chrome” and “Chrome DevTools” are trademarks of their respective owners; names are used for identification only.
+
 ## [Tool reference](./docs/tool-reference.md) | [Changelog](./CHANGELOG.md) | [Contributing](./CONTRIBUTING.md) | [Troubleshooting](./docs/troubleshooting.md) | [Design Principles](./docs/design-principles.md)
 
 ## Fork goals (CLI-first, MCP optional)

@@ -1,0 +1,10 @@
+Chrome DevTools CLI (this repository) is a fork of:
+  https://github.com/ChromeDevTools/chrome-devtools-mcp
+
+Upstream license: Apache License 2.0 (see LICENSE).
+Copyright 2025 Google LLC.
+
+This fork is not affiliated with, endorsed by, or sponsored by Google LLC, Chrome DevTools, or the Chromium project.
+
+This project depends on Chrome DevTools Frontend (`chrome-devtools-frontend`), which includes code licensed under the
+BSD 3-Clause license (see the dependency’s LICENSE and generated third-party notices).
