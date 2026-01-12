@@ -71,6 +71,24 @@ Use this skill when:
 npm i -g github:JoshuaSeth/chrome-devtools-cli
 ```
 
+Sanity check (you must end up with the `chrome_devtools` binary):
+
+```bash
+command -v chrome_devtools
+chrome_devtools --help | sed -n '1,25p'
+```
+
+Important: do **not** `npm i -g chrome-devtools-cli` from the npm registry — that installs a different tool (you’ll get `chrome-mcp-cli` and you’ll be missing `chrome_devtools`).
+
+If you installed the wrong package by accident, fix it:
+
+```bash
+npm rm -g chrome-devtools-cli 2>/dev/null || true
+npm i -g github:JoshuaSeth/chrome-devtools-cli
+```
+
+If you’re on npm v11+, `npm bin -g` no longer exists; use `npm prefix -g` and ensure `<prefix>/bin` is on `PATH`.
+
 ### Confirm CLI and discover commands
 
 ```bash
@@ -376,14 +394,32 @@ The reliable pattern is:
 * Clone the whole user-data-dir (or at least `Local State` + the profile directory like `Default/`)
 * Ensure no other Chrome instance is using the cloned directory (profile locking can cause weirdness)
 
+Example (macOS, fast + safe enough for most cases):
+
+```bash
+CHROME_UDD="$HOME/Library/Application Support/Google/Chrome"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+CLONE="$HOME/.cache/chrome-devtools-cli/wasabi-user-data-$STAMP"
+
+rsync -a \
+  --exclude 'Singleton*' \
+  --exclude 'Cache' \
+  --exclude 'Code Cache' \
+  --exclude 'GPUCache' \
+  --exclude 'Crashpad' \
+  "$CHROME_UDD/" "$CLONE/"
+```
+
 ### Step 2 — Launch headed Chrome with remote debugging (macOS)
 
 Use a dedicated clone path and a localhost-only remote debugging port:
 
 ```bash
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-CLONE="$HOME/.cache/chrome-devtools-cli/wasabi-user-data"
-PORT=9222
+# Reuse the same $CLONE you created in Step 1.
+PORT=9222 # if busy, use 9223/9224
+
+lsof -nP -iTCP:$PORT -sTCP:LISTEN >/dev/null 2>&1 && PORT=9223
 
 "$CHROME" \
   --user-data-dir="$CLONE" \
@@ -398,7 +434,7 @@ PORT=9222
 ### Step 3 — Attach with `chrome_devtools` (session mode)
 
 ```bash
-chrome_devtools session --format text --browserUrl "http://127.0.0.1:9222"
+chrome_devtools session --format text --browserUrl "http://127.0.0.1:$PORT"
 ```
 
 Inside the session:
@@ -407,6 +443,19 @@ Inside the session:
 list_pages
 select_page 1
 take_snapshot
+```
+
+Wasabi “tell me what you see” single-shot capture (dashboard screenshot to a file):
+
+```bash
+OUT="$HOME/.cache/wasabi-dashboard.png"
+chrome_devtools session --format text --browserUrl "http://127.0.0.1:$PORT" <<EOF
+list_pages
+# select the page whose URL contains "wasabisys.com" (adjust index)
+select_page 1
+evaluate_script "() => ({ url: location.href, title: document.title })"
+take_screenshot --fullPage --filePath "$OUT"
+EOF
 ```
 
 ### Step 4 — Verify autofill happened (without reading secrets)
